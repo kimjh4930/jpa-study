@@ -16,11 +16,8 @@ public class JpaMain {
         tx.begin();
 
         try{
-            List<Member> findList = em.createQuery("select m from Member as m").getResultList();
-
-            for(Member m : findList){
-                System.out.println(m.getId() + ", " + m.getName());
-            }
+            Member findMember = em.find(Member.class, 150L);
+            findMember.setName("zzzzzz");
 
             tx.commit();
         }catch (Exception e){
