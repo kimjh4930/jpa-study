@@ -1,67 +1,151 @@
 package hellojpa;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
- * JPA가 관리하는 객체임을 의미함.
- *  - name : 매핑할 테이블 이름.
- *  아래와 같이 Query가 생성됨.
- *    select
- *         member0_.id as id1_0_0_,
- *         member0_.name as name2_0_0_
- *     from
- *         MBR member0_ //Table 이름이 바뀐것을 확인 할 수 있음.
- *     where
- *         member0_.id=?
- *
- *  데이터베이스 스키아 자동생성
- *      - DDL을 애플리케이션 실행 시점에 자동으로 생성함.
- *      - 테이블중심 -> 객체중심
- *      - 데이터베이스 방언을 활용해서 데이터베이스에 맞는 적절한 DDL을 생성함.
- *          - 이 DDL 은 개발장비에서만 사용 할 것.
- *          - 실무에서는 Table을 따로 생성하고 Mapping만 할 것.
- *          - 필요할 경우에는 적절히 다듬어서 사용 할 것.
- *
- *  주의
- *      - 기본 생성자 필수, (public, protected 를 허용)
- *      - final, enum, interface, enum 사용 불가
- *      - 저장할 필드에 final을 사용 할 수 없음.
+ *      create table Member (
+ *        id bigint not null,
+ *         age integer,
+ *         createDate timestamp,
+ *         description clob,
+ *         lastModifiedDate timestamp,
+ *         roleType varchar(255),
+ *         name varchar(255),
+ *         primary key (id)
+ *     )
+ *     생성된 Query
  */
+
 @Entity
+//@Table(uniqueConstraints = )
 public class Member {
 
     @Id
     private Long id;
 
     /**
-     * JPA 실행에 영향을 주지 않음. DDL생성에만 영향을 준다.
-     * JPA 실행 로직에는 영향을 주지 않음.
+     *  - name : 필드와 매핑할 테이블의 컬럼 이름
+     *  - insertable, updatable : 등록, 변경 가능 여부
+     *  - unique : Unique 제약조건을 설정 할 떄 사용.
+     *      - @Table 의 uniqueConstraints 속성과 역할이 같음.
+     *      - Column에서 사용하기보다 @Table에서 사용하는것이 식별하기 좋음.
+     *  - columnDefinition : 데이터베이스 컬럼 정보를 직접 줄 수 있다.
+     *  - precision : 소수점을 포함한 전체 자릿수
+     *  - scale : 소수의 자릿수
+     *      - precision, scale 모두 double, float타임에는 적용되지 않음.
+     *      - 정밀한 소수를 다루어야 할 때만 사용.
      */
-    @Column(unique = true, length = 10)
-    private String name;
 
-    protected Member (){}
+    @Column(name = "name", updatable = false, columnDefinition = "varchar(100) default 'EMPTY'")
+    private String username;
 
-    public Member (Long id, String name){
-        this.id = id;
-        this.name = name;
-    }
+    @Column
+    private BigDecimal age;
+
+    /**
+     * ORDINAL : Enum의 순서를 저장함. -> 위험. 사용하지 말 것.
+     *  - roleType integer
+     * STRING : Enum 의 이름을 데이터베이스에 저장.
+     *  - roleType varchar(255)
+     */
+    @Enumerated(EnumType.ORDINAL)
+    private RoleType roleType;
+
+    /**
+     * DATE : 날짜
+     * TIME : 시간
+     * TIMESTAMP : 날짜, 시간
+     */
+//    @Temporal(TemporalType.TIMESTAMP)
+//    private Date createDate;
+    //Java 8 이상에서는 아래와 같이 사용.
+    private LocalDate createDate;
+
+//    @Temporal(TemporalType.TIMESTAMP)
+//    private Date lastModifiedDate;
+    //Java 8 이상에서는 아래와 같이 사용.
+    private LocalDateTime lastModifiedDate;
+
+
+//    private LocalDateTime
+
+    // varchar를 넘어서는 내용을 넣을 때, Lob을 사용한다.
+    // 문자인경우 clob으로 생성
+    @Lob
+    private String description;
+
+
+    /**
+     * 특정 필드를 컬럼에서만 사용. 메모리에서만 사용.
+     */
+    @Transient
+    private int temp;
 
     public Long getId() {
         return id;
-    }
-
-    public String getName() {
-        return name;
     }
 
     public void setId(Long id) {
         this.id = id;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public BigDecimal getAge() {
+        return age;
+    }
+
+    public void setAge(BigDecimal age) {
+        this.age = age;
+    }
+
+    public RoleType getRoleType() {
+        return roleType;
+    }
+
+    public void setRoleType(RoleType roleType) {
+        this.roleType = roleType;
+    }
+
+    public LocalDate getCreateDate() {
+        return createDate;
+    }
+
+    public void setCreateDate(LocalDate createDate) {
+        this.createDate = createDate;
+    }
+
+    public LocalDateTime getLastModifiedDate() {
+        return lastModifiedDate;
+    }
+
+    public void setLastModifiedDate(LocalDateTime lastModifiedDate) {
+        this.lastModifiedDate = lastModifiedDate;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public int getTemp() {
+        return temp;
+    }
+
+    public void setTemp(int temp) {
+        this.temp = temp;
     }
 }
