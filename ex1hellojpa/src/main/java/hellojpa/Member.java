@@ -23,6 +23,11 @@ import javax.persistence.Id;
  *          - 이 DDL 은 개발장비에서만 사용 할 것.
  *          - 실무에서는 Table을 따로 생성하고 Mapping만 할 것.
  *          - 필요할 경우에는 적절히 다듬어서 사용 할 것.
+ *
+ *  주의
+ *      - 기본 생성자 필수, (public, protected 를 허용)
+ *      - final, enum, interface, enum 사용 불가
+ *      - 저장할 필드에 final을 사용 할 수 없음.
  */
 @Entity
 public class Member {
