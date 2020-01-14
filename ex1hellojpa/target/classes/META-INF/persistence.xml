@@ -17,13 +17,6 @@
             <property name="hibernate.use_sql_comments" value="true"/>
             <property name="hibernate.jdbc.batch_size" value="10"/>
             <property name="hibernate.hbm2ddl.auto" value="create" />
-            <!-- 옵션
-              - create : 매번 생성한다.
-              - create-drop : 실행 할 때 생성하고, Application이 종료되면 table을 삭제한다.
-              - update : 변경점이 생기면 update한다. (Column 추가만 됨.)
-              - validate : Entity와 Table이 정상적으로 mapping되었는지 확인한다.
-              - none : 아무런 의미가 없음. 관례상 none 이라고 적는다.
-            -->
         </properties>
     </persistence-unit>
 </persistence>
