@@ -1,20 +1,19 @@
 package hellojpa;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
 
 @Entity
-public class Member {
+public class Team {
 
     @Id
     @GeneratedValue
+    @Column(name = "TEAM_ID")
     private Long id;
 
-    @Column(name = "USERNAME")
     private String name;
-
-    @ManyToOne
-    @JoinColumn(name = "TEAM_ID")
-    private Team team;
 
     public Long getId() {
         return id;
@@ -30,13 +29,5 @@ public class Member {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public Team getTeam() {
-        return team;
-    }
-
-    public void setTeam(Team team) {
-        this.team = team;
     }
 }
