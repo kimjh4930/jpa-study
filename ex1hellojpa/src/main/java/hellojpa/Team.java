@@ -14,7 +14,9 @@ public class Team {
 
     private String name;
 
-    @OneToMany(mappedBy = "team")
+    //일대다 연관관계.
+    @OneToMany
+    @JoinColumn(name = "TEAM_ID")   //@JoinColumn 을 설정하지 않으면 조인 테이블 전략이 적용됨.
     private List<Member> members = new ArrayList<>();
 
     public void addMember (Member member){

@@ -13,7 +13,6 @@ public class Member {
     private String name;
 
     @ManyToOne
-    @JoinColumn(name = "TEAM_ID")
     private Team team;
 
     public Long getId() {
