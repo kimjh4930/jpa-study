@@ -5,24 +5,24 @@ import javax.persistence.*;
 public class JpaMain {
 
     /**
-     *  일대다 매핑
-     *      - 1 쪽이 연관관계의 주인.
-     *      - N 쪽에 외래키를 가짐
-     *      - 객체와 테이블의 차이 때문에 반대편 테이블에서 외래 키를 관리하는 독특한 구조를 갖게 됨.
-     *      - @JoinColumn을 사용해야함. 그렇지 않으면 조인 테이블 방식을 사용함.
-     *          - create table Team_Member (
-     *            Team_TEAM_ID bigint not null,
-     *            members_id bigint not null
-     *            )
-     *            @JoinColumn을 사용하지 않으면, 위와 같이 간 테이블이 추가 된다.
+     *  일대일 관계
+     *      - 주 테이블이나 대상 테이블 중 외래 키 선택가능
+     *      - 외래키에 데이터베이스 유니크(UNI) 제약조건 추가
+     *      - 다대일 단방향 연관관계와 비슷.
      *
-     *      - 단점
-     *          - 실제업무에서 수많은 테이블이 엮여서 돌아간다.
-     *            insert query가 발생하면서 update가 발생하면 혼돈이 발생 할 수 있다.
-     *            외래키를 들고있는 쪽에서 연관관계를 설정하는 것이 적절함.
-     *          - 엔티티가 관리하는 외래 키가 다른 테이블에 있음.
-     *          - 연관관계 관리르 루이해 추가로 UPDATE SQL을 실행함.
-     *
+     *      - 대상 테이블에 외래 키 단방향 : 지원하지 않음. (LOCKER에서 MEMBER 를 FK 로 설정하는 경우를 의미)
+     *          - 양방향 관계에서는 대상 테이블에서 외래키를 가질 수 있음. -> 대상테이블과 주 테이블을 분리해서 생각 할 필요가 없음.
+     *  주 테이블에 외래키
+     *      - 주 객체가 대상 객체의 참조를 가지는 것 처럼 주 테이블에 외래 키를 두고 대상 테이블을 찾음
+     *      - 객체지향 개발자 선호
+     *      - JPA 매핑편리
+     *      - 장점 : 주 테이블만 조회해도 대상 테이블에 데이터 있는지 확인가능. (Member 로만 조회해도 Member와 연결된 Locker가 있는지 확인 가능.)
+     *      - 단점 : 값이 없으면 외래 키에 null을 허용해야 함.
+     *  대상 테이블에 외래 키
+     *      - 대상 테이블에 외래 키가 존재
+     *      - 전통적인 데이터베이스 개발자가 선호함.
+     *      - 장점 : 주 테이블과 대상 테이블을 일대일 관계에서 일대다 관계로 변경할 때 테이블 구조 유지
+     *      - 단점 : 프록시 기능의 한계로 지연 로딩으로 설정해도 항상 즉시 로딩됨.
      */
 
     public static void main(String args[]) {
@@ -33,20 +33,6 @@ public class JpaMain {
         tx.begin();
 
         try{
-
-            Member member = new Member();
-            member.setName("memberA");
-            em.persist(member);
-
-            Team team = new Team();
-            team.setName("teamA");
-            team.getMembers().add(member);
-            em.persist(team);
-
-            /**
-             *  insert into Team (name, TEAM_ID) values (?, ?)  //insert query가 발생하고
-             *  update Member set TEAM_ID=? where id=?          //member 정보를 update 한다.
-             */
 
             tx.commit();
         }catch (Exception e){
