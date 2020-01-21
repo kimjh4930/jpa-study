@@ -15,16 +15,10 @@ public class Member extends BaseEntity {
     @Column(name = "USERNAME")
     private String name;
 
-    @ManyToOne
+    // Member 를 요청할 때, Team 을 Proxy로 요청함.
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn (name = "TEAM_ID")
     private Team team;
-
-    @OneToOne
-    @JoinColumn(name = "LOCKER_ID")
-    private Locker locker;
-
-    @OneToMany(mappedBy = "member")
-    private List<MemberProduct> memberProducts = new ArrayList<>();
 
     public Long getId() {
         return id;
