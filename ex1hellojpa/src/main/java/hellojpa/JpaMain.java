@@ -5,29 +5,35 @@ import javax.persistence.*;
 public class JpaMain {
 
     /**
-     *  즉시로딩 지연로딩
+     *  영속성 전이와 고아객체
      *
-     *  - Member를 조회 할 때, Team 도 같이 조회해야 할까?
+     *  영속성 전이 : CASCADE
+     *      - 특정 엔티티를 영속 상태로 만들 떄 연관된 엔티티도 함께 영속 상태로 만들고 싶을 때 사용.
+     *      - parent를 영속성 컨텍스트에 올릴 때, Parent에 연관된 Child도 같이 올리겠다는 의미.
+     *          - em.persist(parent) 만 설정하면 child 도 같이 영속성 컨텍스트에 올라감.
+     *      - 영속성 전이는 연관관계를 매핑하는 것과 아무런 관련이 없음.
+     *      - 엔티티를 영속화 할 때 연관된 엔티티도 함께 영속화하는 편리함을 제공 할 뿐.
+     *      - Option
+     *          - ALL       : Life Cycle을 맞출 때 사용
+     *          - PERSIST   : 저장 Life Cycle을 맞출 때 사용.
+     *          - REMOVE
      *
-     *  - Team에 fetch = LAZY 로 설정하면, Team 내부 값을 실제 사용 할 때, Team 을 초기화 한다.
-     *      - Member만 조회 할 때는 Team을 Proxy로 가져옴.
-     *      - Member를 부르고 Team을 부를 때 Query가 두번 발생함.
+     *      - 언제 사용해야하나?
+     *          - 한 부모가 자식들을 관리 할 때 사용.
+     *          - 자식을 여러 부모가 관리하는 경우에는 사용하면 안됨. -> 여러 부모가 관리 할 땐 따로따로 관리해야 한다.
+     *          - 소유자가 하나일 때만 사용
      *
-     *  - Member와 Team을 거의 항상 같이 조회한다면?
-     *      - LAZY 로딩 할 필요가 없음. 이떈 EAGER을 사용.
+     *  고아 객체
+     *      - 고아 객체 제거 : 부모 엔티티와 연관관계가 끊어진 자식 엔티티를 자동으로 삭제
+     *      - orphanRemoval = true
+     *      - 참조하는 곳이 하나일 떄 사용해야 함!
+     *      - 특정 엔티티가 개인 소유할 때 사용
+     *      - 부모가 삭제되면 부모의 자식들은 전부 고아가 되므로 CascadeType.REMOVE 처럼 동작한다.
      *
-     *  - 프록시와 즉시로딩 주의
-     *      - 가급적 지연로딩만 사용 (특히 실무에서)
-     *      - 즉시 로딩을 적용하면 예상하지 못한 SQL이 발생함.
-     *      - 즉시 로딩은 JPQL에서 N+1 문제를 일으킨다.
-     *          - JPQL은 Query문이 SQL문으로 번역됨.
-     *          - Member에서 Team이 즉시로딩으로 되어있으면, Team을 가져오기위해 별도의 Query가 또 만들어짐.
-     *          - Member 안에 연관관계가 N개 있으면, Query가 N개 만들어짐.
-     *          - N(연관관계 쿼리) + 1(요청한 쿼리) 문제가 발생함.
-     *          - LAZY로 설정하고 Member 요청시 Team도 같이 가져오고 싶으면 fetch join을 사용한다.
-     *      - @ManyToOne, @OneToOne 은 기본 설정이 즉시로딩(EAGER)
-     *      - @OneToMany, @ManyToMany 는 기본 설정이 지연로딩(LAZY)
-     */
+     *  영속성 전이 + 고아 객체, 생명주기
+     *      - 두 옵션을 모두 활성화하면 부모의 생명주기로 자식의 생명주기를 제어 할 수 있음.
+     *      - DDD에서 AggregateRoot 개념을 구현 할 때 유용.
+    */
 
     public static void main(String args[]) {
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
@@ -37,27 +43,22 @@ public class JpaMain {
         tx.begin();
 
         try{
+            Child child1 = new Child();
+            Child child2 = new Child();
 
-            Team team = new Team();
-            team.setName("teamA");
-            em.persist(team);
+            Parent parent = new Parent();
+            parent.addChild(child1);
+            parent.addChild(child2);
 
-            Member member = new Member();
-            member.setName("user1");
-            member.setTeam(team);
-
-            em.persist(member);
-
-
-            em.flush();
-            em.clear();
-
-            Member m = em.find(Member.class, member.getId());
-
-            // Member 를 Proxy로 가져온다.
-            // m : class hellojpa.Team$HibernateProxy
-            System.out.println("m : " + m.getTeam().getClass());
-
+            /**
+             *  em.persist를 세 번 호출해야 함.
+             *
+             *  parent를 입력 할 때, child도 알아서 들어갔으면 좋겠다
+             *      : CascadeType.ALL 로 설정한다.
+             */
+            em.persist(parent);
+            em.persist(child1);
+            em.persist(child2);
 
             tx.commit();
         }catch (Exception e){
