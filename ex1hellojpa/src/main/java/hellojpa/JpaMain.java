@@ -5,34 +5,37 @@ import javax.persistence.*;
 public class JpaMain {
 
     /**
-     *  영속성 전이와 고아객체
+     *  기본값 타입
      *
-     *  영속성 전이 : CASCADE
-     *      - 특정 엔티티를 영속 상태로 만들 떄 연관된 엔티티도 함께 영속 상태로 만들고 싶을 때 사용.
-     *      - parent를 영속성 컨텍스트에 올릴 때, Parent에 연관된 Child도 같이 올리겠다는 의미.
-     *          - em.persist(parent) 만 설정하면 child 도 같이 영속성 컨텍스트에 올라감.
-     *      - 영속성 전이는 연관관계를 매핑하는 것과 아무런 관련이 없음.
-     *      - 엔티티를 영속화 할 때 연관된 엔티티도 함께 영속화하는 편리함을 제공 할 뿐.
-     *      - Option
-     *          - ALL       : Life Cycle을 맞출 때 사용
-     *          - PERSIST   : 저장 Life Cycle을 맞출 때 사용.
-     *          - REMOVE
+     *  JPA의 데이터 타입 분류
+     *      - Entity 타입
+     *          - @Entity로 정의하는 객체
+     *          - 데이터가 변해도 식별자로 지속해서 추적 가능
+     *          - 회원 엔티티의 키나 나이 값을 변경해도 식별자로 인식 가능
+     *      - 값 타입
+     *          - 단순한 값으로 사용하는 자바 기본 타입이나 객체
+     *          - 식별자가 없고 값만 있으므로 변경시 추적 불가
      *
-     *      - 언제 사용해야하나?
-     *          - 한 부모가 자식들을 관리 할 때 사용.
-     *          - 자식을 여러 부모가 관리하는 경우에는 사용하면 안됨. -> 여러 부모가 관리 할 땐 따로따로 관리해야 한다.
-     *          - 소유자가 하나일 때만 사용
      *
-     *  고아 객체
-     *      - 고아 객체 제거 : 부모 엔티티와 연관관계가 끊어진 자식 엔티티를 자동으로 삭제
-     *      - orphanRemoval = true
-     *      - 참조하는 곳이 하나일 떄 사용해야 함!
-     *      - 특정 엔티티가 개인 소유할 때 사용
-     *      - 부모가 삭제되면 부모의 자식들은 전부 고아가 되므로 CascadeType.REMOVE 처럼 동작한다.
+     *  값 타입 분류
+     *      - 기본값 타입
+     *          - 자바 기본 타입
+     *          - 래퍼 클래스
+     *          - String
+     *      - 임베디드 타입 (복합 값 타입)
+     *      - 컬렉션 값 타입 (Java Collection 에 기본값이나 임베디드 타입을 넣을 수 있는 값 타입)
      *
-     *  영속성 전이 + 고아 객체, 생명주기
-     *      - 두 옵션을 모두 활성화하면 부모의 생명주기로 자식의 생명주기를 제어 할 수 있음.
-     *      - DDD에서 AggregateRoot 개념을 구현 할 때 유용.
+     *  값 타입 특징
+     *      - 생명주기를 엔티티에 의존
+     *          - 회원을 삭제하면 이름, 나이 필드도 함께 삭
+     *      - 값 타입을 공유하면 안됨
+     *          - 회원 이름 변경 시, 다른 회원의 이름도 함께 변경되면 안됨.
+     *
+     *  자바의 기본 타입은 절대 공유하지 못한다.
+     *      - int, double 같은 기본 타입은 절대 공유하지 못한다.
+     *      - 기본 타입 (Primitive type)은 항상 값을 복사한다.
+     *      - Integer 같은 래퍼 클래스나 String 같은 특수한 클래스는 공유 가능한 객체이지만 변경하지 못한다.
+     *
     */
 
     public static void main(String args[]) {
@@ -43,22 +46,7 @@ public class JpaMain {
         tx.begin();
 
         try{
-            Child child1 = new Child();
-            Child child2 = new Child();
 
-            Parent parent = new Parent();
-            parent.addChild(child1);
-            parent.addChild(child2);
-
-            /**
-             *  em.persist를 세 번 호출해야 함.
-             *
-             *  parent를 입력 할 때, child도 알아서 들어갔으면 좋겠다
-             *      : CascadeType.ALL 로 설정한다.
-             */
-            em.persist(parent);
-            em.persist(child1);
-            em.persist(child2);
 
             tx.commit();
         }catch (Exception e){

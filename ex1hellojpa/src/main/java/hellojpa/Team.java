@@ -14,7 +14,6 @@ public class Team extends BaseEntity {
 
     private String name;
 
-    //일대다 연관관계.
     @OneToMany(mappedBy = "team")
     private List<Member> members = new ArrayList<>();
 

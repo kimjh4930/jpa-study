@@ -14,9 +14,6 @@ public class Parent {
 
     private String name;
 
-    /**
-     *  childList 에서 제거된 Child 는 삭제된다.
-     */
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Child> childList = new ArrayList<>();
 
