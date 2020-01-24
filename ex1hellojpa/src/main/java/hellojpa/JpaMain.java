@@ -1,50 +1,41 @@
 package hellojpa;
 
 import javax.persistence.*;
-import java.time.LocalDateTime;
 
 public class JpaMain {
 
     /**
-     *  임베디드 타입
-     *      - 새로운 값 타입을 직접 정의할 수 있음.
-     *      - JPA는 임베디드 타입이라 함
-     *      - 주로 기본 값 타입을 만들어서 복합 값 타입이라고도 함
-     *      - int, String과 같은 값 타입
+     *  값 타입과 불변객체
+     *      - 값 타입은 복잡한 객체 새상을 조금이라도 단순화하려고 만든 개념.
+     *      - 값 타입을 단순하고 안전하게 다룰 수 있어야 한다.
      *
-     *  임베디드 타입 사용법
-     *      - @Embeddable : 값 타입을 정의하는 곳에 표시
-     *      - @Embedded : 값 타입을 사용하는 곳에 표시
-     *      - 기본 생성자 필수
+     *  값 타입 공유 참조.
+     *      - 임베디드 타입 같은 값 타입을 여러 엔티티에서 공유하면 위험하다.
+     *          - 객체참조를 하면, 한쪽에서 값을 바꿨을 때, 같은 값을 참조하는 곳에서도 값이 변경된다.
      *
-     *  임베디드 타입의 장점
-     *      - 재사용
-     *      - 높은 응집도
-     *      - Period.isWork() 처럼 해당 값 타입만 사용하는 의미 있는 메소드를 만들 수 있음. -> 객체지향적인 설계 가능.
-     *      - 임베디드 타입을 포함한 모든 값 타입은, 값 타입을 소유한 엔티티에 생명주기를 의존함.
+     *  값 타입 복사
+     *      - 값 타입의 실제 인스턴스 값을 공유하는 것은 위험하다.
+     *      - 대신 값을 복사해서 사용해야 한다.
+     *      - 그러나 누군가가 실수로 복사해서 사용하지 않을 경우, compile level에서 side effect를 찾을 수 없다.
      *
-     *  임베디드 타입과 테이블 매핑
-     *      - 데이터베이스의 Table 입장에서는 바뀔 것이 없다.
+     *  객체 타입의 한계
+     *      - 항상 값을 복사해서 사용하면 공유 참조로 인해 발생하는 부작용을 피할 수 있다.
+     *      - 문제는 직접 정의한 값 타입은 객체 타입이라는 것
+     *      - 기본타입은 값을 복사하지만, 객체는 참조한다.
+     *      - 누군가가 객체를 복사하지 않고 사용하는 것을 막을 수 없다.
      *
-     *  임베디드 타입과 테이블 매핑
-     *      - 임베디드 타입은 Entity의 값일 뿐이다.
-     *      - 임베디드 타입을 사용하기 전과 후에 매핑하는 테이블은 같다. (중요)
-     *      - 객체와 테이블을 아주 세밀하게(fine-grained)매핑하는 것이 가능하다 (중요)
-     *          - 회원 엔티티는 이름, 근무시작일, 근무 종료일, 주소 도시, 주소 번지, 주소 우편번호를 가진
-     *          - 회원 엔티티는 이름, 근무기간, 집 주소를 가진다. -> 모델링을 설명하기 쉽고 깔끔하다.
-     *      - 잘 설계한 ORM 애플리케이션은 매핑한 테이블의 수보다 클래스의 수가 더 많다.
+     *  불변객체
+     *      - 객체 타입을 수정 할 수 없게 만들면 부작용을 원천 차단 할 수 있다.
+     *      - 값 타입은 불변객체로 설계해야 함.
+     *      - 불변객체 : 생성 시점 이후 절대 값을 변경할 수 없는 객체로 만들어야 함.
+     *      - 생성자로만 값을 설정하고 수정자를 만들지 않는다.
+     *          - 혹은 내부에서만 사용 할 수 있게 수정자의 접근자를 private으로 선언한다.
+     *      - 값을 변경하고 싶을 땐, 객체를 새로 생성한다.
      *
-     *  임베디드 타입과 연관관계
-     *      - EmbeddedType이 Entity를 가질 수 있다.
-     *      - EmbeddedType이 Entity의 FK 만 가지고 있으면 됨.
-     *
-     *  속성 재정의 : @AttributeOverride
-     *      - 한 엔티티에서 같은 값 타입을 사용한다면?
-     *
-     *  임베디드 타입의 값이 null이면 매핑한 컬럼 값은 모두 Null.
+     *  불변이라는 제약으로 큰 재앙을 막을 수 있다.
     */
 
-    public static void main(String args[]) {
+   public static void main(String args[]) {
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
         EntityManager em = emf.createEntityManager();
         EntityTransaction tx = em.getTransaction();
@@ -53,12 +44,36 @@ public class JpaMain {
 
         try{
 
-            Member member = new Member();
-            member.setName("hello");
-            member.setHomeAddress(new Address("city", "street", "zipcode"));
-            member.setWorkPeriod(new Period(LocalDateTime.now(), LocalDateTime.now()));
+            Address address = new Address("city", "street", "zipcode");
 
-            em.persist(member);
+            Member member1 = new Member();
+            member1.setName("hello");
+            member1.setHomeAddress(address);
+            em.persist(member1);
+
+            Member member2 = new Member();
+            member2.setName("hello2");
+
+            //값을 복사해서 사용해야 한다.
+            Address copyAddress = new Address(address.getCity(), address.getStreet(), address.getZipcode());
+            //member2.setHomeAddress(address);
+            member2.setHomeAddress(copyAddress);
+
+            em.persist(member2);
+
+            /**
+             *  같은 임베디드 값타입 객체를 참조하면, member1 의 주소를 변경할 때 member2의 주소도 같이 변경된다.
+             *  Update Query가 두번 발생한다.
+             *
+             *  member1에 대한 query
+             *  update Member set city=?, street=?, zipcode=?, USERNAME=?, endDate=?, startDate=? where MEMBER_ID=?
+             *
+             *  member2에 대한 query
+             *  update Member set city=?, street=?, zipcode=?, USERNAME=?, endDate=?, startDate=? where MEMBER_ID=?
+             *
+             */
+            //불변객체로 만들면 아래 작업을 원천봉쇄 할 수 있다.
+            //member1.getHomeAddress().setCity("newCity");
 
             tx.commit();
         }catch (Exception e){
