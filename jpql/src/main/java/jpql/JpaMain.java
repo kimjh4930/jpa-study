@@ -4,19 +4,10 @@ import javax.persistence.*;
 import java.util.List;
 
 /**
- *  프로젝션(SELECT)
- *      - SELECT절에 조회할 대상을 지정하는 것
- *      - 프로젝션 대상 : Entity, Embedded 타입, 스칼라 타입(숫자, 문자 등 기본데이터 타입)
- *      - DISTINCT 로 중복 제거
- *
- *  여러 값 조회
- *      - Query 타입으로 조회
- *      - Object[] 타입으로 조회
- *      - new 명령어로 조회
- *          - 단순 값을 DTO로 바로 조회
- *              - SELECT new jpabook.jpql.UserDTO(m.username, m.age) FROM member m
- *          - 패키지 명을 포함한 전체 클래스 명 입력
- *          - 순서와 타입이 일치하는 생성자 필요
+ *  페이징 API
+ *      - JPA는 페이징을 다음 두 API로 추상화
+ *          - setFirstResult(int startPosition) : 조회 시작 위치
+ *          - setMaxResults(int maxResult) : 조회할 데이터
  *
  */
 
@@ -32,50 +23,36 @@ public class JpaMain {
 
         try{
 
-            Member member = new Member();
-            member.setUsername("member1");
-            member.setAge(10);
-            em.persist(member);
+            for(int i=0; i<100; i++){
+                Member member = new Member();
+                member.setUsername("member" + i);
+                member.setAge(i);
+                em.persist(member);
+            }
 
             em.flush();
             em.clear();
 
-
-            List<Team> result = em.createQuery("select m.team from Member m", Team.class)
-                    .getResultList();
-            /**
-             *  select
-             *      team1_.TEAM_ID as TEAM_ID1_3_,
-             *      team1_.name as name2_3_
-             *  from
-             *      Member member0_
-             *         inner join
-             *             Team team1_
-             *                 on member0_.TEAM_ID=team1_.TEAM_ID
-             *
-             *   => SQL문과 비슷하게 맞춰줘야 한다.
+            /*
+                select
+                    member0_.MEMBER_ID as MEMBER_I1_0_,
+                    member0_.age as age2_0_,
+                    member0_.TEAM_ID as TEAM_ID4_0_,
+                    member0_.username as username3_0_
+                from
+                    Member member0_
+                order by
+                    member0_.age desc limit ? offset ?
              */
-
-            // 동일한 쿼리가 나가지만, 아래와 같이 작성하는 것이 바람직하다.
-            // Query를 튜닝해야 하는 입장에서는 아래처럼 적는것이 더 명확하다.
-            List<Team> result1 = em.createQuery("select t from Member m join m.team t", Team.class)
+            List<Member> members = em.createQuery("select m from Member m order by m.age desc", Member.class)
+                    .setFirstResult(1)  // 몇 번째 부터
+                    .setMaxResults(20)  // 몇개 가져올건지
                     .getResultList();
 
-            //스칼라 타입
-            List<Object[]> resultList = em.createQuery("select m.username, m.age from Member m").getResultList();
+            System.out.println("size : " + members.size());
 
-            Object[] o = resultList.get(0);
-
-            System.out.println("username : " + o[0]);
-            System.out.println("age : " + o[1]);
-
-            //DTO로 조회
-            List<UserDTO> userDTOs = em.createQuery("select new jpql.UserDTO(m.username, m.age) from Member m")
-                    .getResultList();
-
-            for(UserDTO dto : userDTOs){
-                System.out.println("dto username : " + dto.getUsername());
-                System.out.println("dto age : " + dto.getAge());
+            for(Member m : members){
+                System.out.println(m.toString());
             }
 
         }catch (Exception e){
