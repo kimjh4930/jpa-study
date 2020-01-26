@@ -16,12 +16,17 @@ public class Member {
 
     private int age;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinColumn(name = "TEAM_ID")
     private Team team;
 
     @OneToMany(mappedBy = "member")
     private List<Order> orders = new ArrayList<>();
+
+    public void changeTeam (Team team){
+        this.setTeam(team);
+        team.getMembers().add(this);
+    }
 
     public Long getId() {
         return id;

@@ -4,10 +4,27 @@ import javax.persistence.*;
 import java.util.List;
 
 /**
- *  페이징 API
- *      - JPA는 페이징을 다음 두 API로 추상화
- *          - setFirstResult(int startPosition) : 조회 시작 위치
- *          - setMaxResults(int maxResult) : 조회할 데이터
+ *  조인
+ *      - 내부조인
+ *          - SELECT m FROM Member m [INNER] JOIN m.team t
+ *            : Member는 있고 Team 이 없으면 조회 안됨.
+ *      - 외부조인
+ *          - SELECT m FROM Member m LEFT [OUTER] JOIN m.team t
+ *            : Team 이 없어도 Member 전부 조회됨. team 은 null로 나옴.
+ *      - 세타조인
+ *          - SELECT count(m) from Member m, Team t where m.username = t.name
+ *            : 연관관계가 전혀 없는 테이블 간 Join (막 조인이라 표현함)
+ *
+ *  ON 절
+ *      - 조인 대상 필터링
+ *          - 회원과 팀을 조인하면서, 팀 이름이 A인 팀만 조인
+ *            JPQL : SELECT m, t, FROM Member m LEFT JOIN m.team t on t.name = 'A'
+ *            SQL : SELECT m.*, t.* FROM Member m LEFT JOIN Team t ON m.TEAM_ID = t.id and t.anem = 'A'
+ *      - 연관관계가 없는 엔티티를 외부 조인 할 수 있다.
+ *          - 회원의 이름과 팀의 이름이 같은 대상 외부 조인
+ *            JPQL : SELECT m, t, FROM Member m LEFT JOIN Team t on m.username = t.name
+ *            SQL : SELECT m.*, t.* FROM Member m LEFT JOIN Team t ON m.username = t.name
+ *
  *
  */
 
@@ -23,37 +40,32 @@ public class JpaMain {
 
         try{
 
-            for(int i=0; i<100; i++){
-                Member member = new Member();
-                member.setUsername("member" + i);
-                member.setAge(i);
-                em.persist(member);
-            }
+            Team team = new Team();
+            team.setName("teamA");
+
+            Member member = new Member();
+            member.setUsername("member");
+            member.setAge(10);
+            member.changeTeam(team);
+            em.persist(member);
 
             em.flush();
             em.clear();
 
-            /*
-                select
-                    member0_.MEMBER_ID as MEMBER_I1_0_,
-                    member0_.age as age2_0_,
-                    member0_.TEAM_ID as TEAM_ID4_0_,
-                    member0_.username as username3_0_
-                from
-                    Member member0_
-                order by
-                    member0_.age desc limit ? offset ?
-             */
-            List<Member> members = em.createQuery("select m from Member m order by m.age desc", Member.class)
-                    .setFirstResult(1)  // 몇 번째 부터
-                    .setMaxResults(20)  // 몇개 가져올건지
+            //INNER JOIN (inner join)
+            String innerJoinQuery = "select m from Member m join m.team t";
+            List<Member> members = em.createQuery(innerJoinQuery, Member.class)
                     .getResultList();
 
-            System.out.println("size : " + members.size());
+            //OUTER JOIN (left outer join)
+            String outerJoinQuery = "select m from Member m left join m.team t";
+            List<Member> outerMembers = em.createQuery(outerJoinQuery, Member.class)
+                    .getResultList();
 
-            for(Member m : members){
-                System.out.println(m.toString());
-            }
+            //THETA JOIN (cross)
+            String thetaJoinQuery = "select m from Member m, Team t where m.username = t.name";
+            List<Member> thetaMembers = em.createQuery(thetaJoinQuery, Member.class)
+                    .getResultList();
 
         }catch (Exception e){
             tx.rollback();
