@@ -1,49 +1,22 @@
 package jpql;
 
 import javax.persistence.*;
+import java.util.List;
 
 /**
- *  JPQL 기본 문법과 기능
- *      - JPQL은 객체지향 쿼리 언어.
- *          - 테이블을 대상으로 쿼리를 만드는 것이 아니라, 엔티티를 대상으로 쿼리를 만든다.
- *      - JPQL은 SQL을 추상화해서 특정 데이터베이스 SQL에 의존하지 않는다.
- *      - JPQL은 SQL로 변환된다.
+ *  프로젝션(SELECT)
+ *      - SELECT절에 조회할 대상을 지정하는 것
+ *      - 프로젝션 대상 : Entity, Embedded 타입, 스칼라 타입(숫자, 문자 등 기본데이터 타입)
+ *      - DISTINCT 로 중복 제거
  *
- *  JPQL 문법
- *      - select m from Member as m where m.age > 18
- *          - Member, m.age -> 대소문자 구분.
- *      - JPQL 키워드는 대소문자 구분하지 않음 (SELECT, FROM, WHERE)
- *      - 엔티티 이름 사용, 테이블 이름이 아님
- *      - 별칭은 필수(m) as 는 생략 가능.
- *
- *  집합과 정렬
- *      - select COUNT(m)   // 회원수
- *               SUM(m.age) // 나이 합
- *               AVG(m.age) // 평균 나이
- *               MAX(m.age) // 최대 나이
- *               MIN(m.age) // 최소 나이
- *        from Member m
- *      - GROUP BY, HAVING
- *      - ORDER BY
- *
- *  TypedQuery, Query
- *      - TypedQuery : 반환타입이 명확할 때 사용
- *      - Query : 반환 타입이 명확하지 않을 떄 사용
- *
- *  결과 조회 API
- *      - query.getResultList() -> 결과가 Collection일 경우에 사용.
- *          - 결과가 없을땐 빈 리스트를 반환
- *          - NullPointException 를 막을 수 있다.
- *      - query.getSingleResult() -> 결과가 하나일 때 사용.
- *          - 결과가 정확히 하나일 때 사용해야 함.
- *          - NoResultException -> 결과가 없을 때
- *          - NonUniqueResultException -> 결과가 두개 이상 일 때
- *
- *  파라미터 바인딩
- *      - 이름기준
- *          - select m from Member m where m.username =: username
- *          - query.setParameter("username", usernameParam)
- *      - 위치기준 -> 사용하지 말 것.
+ *  여러 값 조회
+ *      - Query 타입으로 조회
+ *      - Object[] 타입으로 조회
+ *      - new 명령어로 조회
+ *          - 단순 값을 DTO로 바로 조회
+ *              - SELECT new jpabook.jpql.UserDTO(m.username, m.age) FROM member m
+ *          - 패키지 명을 포함한 전체 클래스 명 입력
+ *          - 순서와 타입이 일치하는 생성자 필요
  *
  */
 
@@ -64,23 +37,46 @@ public class JpaMain {
             member.setAge(10);
             em.persist(member);
 
-            // 타입 정보가 명확할 때 TypedQuery 를 사용함.
-            TypedQuery<Member> query1 = em.createQuery("select m from Member m", Member.class);
-
-            // 반환값이 String으로 며확하므로 사용 가능.
-            TypedQuery<String> query2 = em.createQuery("select m.username from Member m", String.class);
-
-            // 반환값이 명확하지 않을 땐 Query를 사용해야 함.
-            Query query3 = em.createQuery("select m.username, m.age from Member m");
-
-            //파라미터 바인딩
-            TypedQuery<Member> query4 = em.createQuery("select m from Member m where m.username = :username", Member.class)
-                    .setParameter("username","member1");
-
-            Member singleResult = query4.getSingleResult();
-            System.out.println("single : " + singleResult.getUsername());
+            em.flush();
+            em.clear();
 
 
+            List<Team> result = em.createQuery("select m.team from Member m", Team.class)
+                    .getResultList();
+            /**
+             *  select
+             *      team1_.TEAM_ID as TEAM_ID1_3_,
+             *      team1_.name as name2_3_
+             *  from
+             *      Member member0_
+             *         inner join
+             *             Team team1_
+             *                 on member0_.TEAM_ID=team1_.TEAM_ID
+             *
+             *   => SQL문과 비슷하게 맞춰줘야 한다.
+             */
+
+            // 동일한 쿼리가 나가지만, 아래와 같이 작성하는 것이 바람직하다.
+            // Query를 튜닝해야 하는 입장에서는 아래처럼 적는것이 더 명확하다.
+            List<Team> result1 = em.createQuery("select t from Member m join m.team t", Team.class)
+                    .getResultList();
+
+            //스칼라 타입
+            List<Object[]> resultList = em.createQuery("select m.username, m.age from Member m").getResultList();
+
+            Object[] o = resultList.get(0);
+
+            System.out.println("username : " + o[0]);
+            System.out.println("age : " + o[1]);
+
+            //DTO로 조회
+            List<UserDTO> userDTOs = em.createQuery("select new jpql.UserDTO(m.username, m.age) from Member m")
+                    .getResultList();
+
+            for(UserDTO dto : userDTOs){
+                System.out.println("dto username : " + dto.getUsername());
+                System.out.println("dto age : " + dto.getAge());
+            }
 
         }catch (Exception e){
             tx.rollback();
