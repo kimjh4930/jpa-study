@@ -4,13 +4,11 @@ import javax.persistence.*;
 import java.util.List;
 
 /**
- *  JPQL 타입 표현
- *      - 문자 : 'HELLO', 'SHE''s'' //single quatation 을 넣으려면 두개를 넣는다.
- *      - 문자 : 10L(Long), 10D(Double), 10F(Float)
- *      - Boolean : TRUE, FALSE
- *      - ENUM : jpabook.MemberType.Admin -> 패키지명을 포함해서 넣는다.
- *      - Entity Type : Type(m) = Member (상속 관계에서 사용)
- *          - select i from Item i where type(i) == Book
+ *  조건식 - CASE 식식
+ *      - 기본 CASE 식
+ *      - 단순 CASE 식
+ *      - Coalesce : 하나씩 조회해서 null이 아니면 반환
+ *      - NULLIF : 두 값이 같으면 Null 반환, 다르면 첫 번째 값 반
  *
  */
 
@@ -30,7 +28,7 @@ public class JpaMain {
             team.setName("teamA");
 
             Member member = new Member();
-            member.setUsername("member");
+            member.setUsername("관리자");
             member.setAge(10);
             member.changeTeam(team);
             member.setType(MemberType.ADMIN);
@@ -39,11 +37,39 @@ public class JpaMain {
             em.flush();
             em.clear();
 
-            String query = "select m.username, 'HELLO', TRUE from Member m " +
-                    "where m.type = :userType";
-            List<Object[]> resultList = em.createQuery(query)
-                    .setParameter("userType", jpql.MemberType.ADMIN)
+            // 기본 Query
+            String caseQuery = "select " +
+                        "case when m.age <= 10 then '학생요금' " +
+                            "when m.age >= 60 then '경로요금 '" +
+                            "else '일반요금 '" +
+                        "end " +
+                    "from Member m";
+
+            List<String> result = em.createQuery(caseQuery).getResultList();
+
+            for(String r : result) {
+                System.out.println("result : " + r);
+            }
+
+            // Coalesce
+            String coalesceQuery = "select coalesce(m.username, '이름 없는 회원') " +
+                    "from Member m";
+            List<String> coalesceResult = em.createQuery(coalesceQuery, String.class).getResultList();
+
+            for(String s : coalesceResult){
+                System.out.println("coalesce Result : " + s);
+            }
+
+            // NULLIF
+            // 관리자의 이름을 숨겨야 할 때 사용한다.
+            String nullifQuery = "select nullif(m.username, '관리자') as username "+
+                    "from Member m";
+            List<String> nullifResult = em.createQuery(nullifQuery)
                     .getResultList();
+
+            for(String s : nullifResult){
+                System.out.println("nullif Result : " + s);
+            }
 
         }catch (Exception e){
             tx.rollback();
