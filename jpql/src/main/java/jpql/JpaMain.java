@@ -4,11 +4,19 @@ import javax.persistence.*;
 import java.util.List;
 
 /**
- *  조건식 - CASE 식식
- *      - 기본 CASE 식
- *      - 단순 CASE 식
- *      - Coalesce : 하나씩 조회해서 null이 아니면 반환
- *      - NULLIF : 두 값이 같으면 Null 반환, 다르면 첫 번째 값 반
+ *  JPQL 함수
+ *      - JPQL에서 제공하는 함수, DB 에 관계없이 사용 할 수 있다.
+ *      - CONCAT
+ *      - SUBSTRING
+ *      - TRIM
+ *      - LOWER, UPPER
+ *      - LENGTH
+ *      - LOCATE
+ *      - ABS, SQRT, MOD
+ *      - SIZE, INDEX(JPA 용)
+ *
+ *  사용자 정의 함수
+ *      - JPQL에서 제공하는 함수 이외에 사용하는 DB 방언을 상속받고, 사용자 정의 함수를 등록한다.
  *
  */
 
@@ -28,47 +36,43 @@ public class JpaMain {
             team.setName("teamA");
 
             Member member = new Member();
-            member.setUsername("관리자");
+            member.setUsername("관리자1");
             member.setAge(10);
             member.changeTeam(team);
             member.setType(MemberType.ADMIN);
             em.persist(member);
 
+            Member member2 = new Member();
+            member2.setUsername("관리자2");
+            em.persist(member2);
+
             em.flush();
             em.clear();
 
-            // 기본 Query
-            String caseQuery = "select " +
-                        "case when m.age <= 10 then '학생요금' " +
-                            "when m.age >= 60 then '경로요금 '" +
-                            "else '일반요금 '" +
-                        "end " +
-                    "from Member m";
-
-            List<String> result = em.createQuery(caseQuery).getResultList();
-
-            for(String r : result) {
-                System.out.println("result : " + r);
-            }
-
-            // Coalesce
-            String coalesceQuery = "select coalesce(m.username, '이름 없는 회원') " +
-                    "from Member m";
-            List<String> coalesceResult = em.createQuery(coalesceQuery, String.class).getResultList();
-
-            for(String s : coalesceResult){
-                System.out.println("coalesce Result : " + s);
-            }
-
-            // NULLIF
-            // 관리자의 이름을 숨겨야 할 때 사용한다.
-            String nullifQuery = "select nullif(m.username, '관리자') as username "+
-                    "from Member m";
-            List<String> nullifResult = em.createQuery(nullifQuery)
+            // concat
+            String concatQuery = "select concat('a', 'b') from Member m";
+            String query = "select 'a' || 'b' from Member m"; //JPA에서는 || 도 사용 가능.
+            List<String> result = em.createQuery(concatQuery, String.class)
                     .getResultList();
 
-            for(String s : nullifResult){
-                System.out.println("nullif Result : " + s);
+            for(String r : result){
+                System.out.println(r);
+            }
+
+            /**
+             *  사용자 정의 함수
+             *  select
+             *      group_concat(member0_.username) as col_0_0_
+             *  from
+             *      Member member0_
+             */
+            String customedQuery = "select function('group_concat', m.username) from Member m";
+
+            List<String> customedResultList = em.createQuery(customedQuery, String.class)
+                    .getResultList();
+
+            for(String customed : customedResultList){
+                System.out.println("c : " + customed);
             }
 
         }catch (Exception e){
