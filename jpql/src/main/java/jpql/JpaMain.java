@@ -1,37 +1,30 @@
 package jpql;
 
 import javax.persistence.*;
-import java.util.Collection;
 import java.util.List;
 
 /**
- *  JPQL - 경로 표현식
- *      - .(점) 을 찍어 객체 그래프를 탐색하는 것.
- *          select m.username   -> 상태 필드
- *          from Member m
- *              join m.team t   -> 단일 값 연관 필드
- *              join m.orders o -> 컬렉션 값 연관 필드 (orders 가 Collection)
- *          where t.name = '팀A'
+ *  Fetch Join
+ *      - SQL 에서 제공하는 JOIN 이 아님.
+ *      - JPQL 에서 성능 최적화를 위해 제공하는 기능.
+ *      - 연관된 엔티티나 컬렉션을 SQL 한 번에 함께 조회하는 기능
+ *      - 명령어 ::= [LEFT [OUTER] | INNER] JOIN FETCH 조인경로
  *
- *  상태 필드 : 단순히 값을 저장하기 위한 필드 (m.username)
- *      - 경로 탐색의 끝, 탐색하지 않는다.
+ *  Entity fetch join
+ *      - JPQL : select m from Member m join fetch m.team
+ *      - SQL : SELECT M.*, T.* FROM MEMBER M INNER JOIN TEAM T ON M.TEAM_ID = T.ID
+ *          - 즉시로딩(EAGER) 으로 가져올 떄와 동일함.
+ *      - fetch join : 즉시로딩을 하고싶은 것을 명시적으로 지정 할 수 있다.
+ *      - 지연로딩을 적용해도, fetch join이 적용된다.
  *
- *  연관 필드 : 연관관계를 위한 필드
- *      - 단일 값 연관 필드
- *          - @ManyToOne, @OneToOne, 대상이 엔티티
- *          - 묵시적 내부 조인(inner join) 발생, 탐색을 한다.
- *      - 컬렉션 값 연관 필드
- *          - @OneToMany, @ManyToMany, 대상이 Collection
+ *  일대다 관계, 컬렉션 페치 조인
+ *      - select t from Team t join fetch t.members where t.name = '팀A'
  *
- *  주의 사항
- *      - 항상 내부 조인
- *      - 컬렉션은 경로 탐색의 끝, 명시적 조인을 통해 별칭을 얻어야 함
- *      - 경로 탐색은 주로 SELECT, WHERE 절에서 사용하지만 묵시적 조인으로 인해 SQL의 FROM (JOIN)절에 영향을 준다.
- *
- *  실무 조언
- *      - 가급적 묵시적 조인 대신에 명시적 조인을 사용하자
- *          - 조인은 SQL튜닝에 중요 포인트
- *      - 묵시적 조인은 조인이 일어나는 상황을 한눈에 파악하기 어렵다.
+ *  Fetch Join과 Distinct
+ *      - SQL의 DISTINCT는 중복된 결과를 제거하는 명령.
+ *      - JPQL에서 DISTINCT의 역할
+ *          - SQL에 DISTINCT추가.
+ *          - 애플리케이션에서 엔티티 중복 제거.
  */
 
 public class JpaMain {
@@ -46,75 +39,123 @@ public class JpaMain {
 
         try{
 
-            Team team = new Team();
-            team.setName("teamA");
+            Team teamA = new Team();
+            teamA.setName("teamA");
+
+            Team teamB = new Team();
+            teamB.setName("TeamB");
 
             Member member = new Member();
-            member.setUsername("관리자1");
-            member.setAge(10);
-            member.changeTeam(team);
-            member.setType(MemberType.ADMIN);
+            member.setUsername("회원1");
+            member.changeTeam(teamA);
             em.persist(member);
 
             Member member2 = new Member();
-            member2.setUsername("관리자2");
+            member2.setUsername("회원2");
+            member2.changeTeam(teamA);
             em.persist(member2);
+
+            Member member3 = new Member();
+            member3.setUsername("회원3");
+            member3.changeTeam(teamB);
+            em.persist(member3);
 
             em.flush();
             em.clear();
 
             /**
-             * 경로탐색의 끝 더이상 탐색이 불가능 함.
+             *  select
+             *      member0_.MEMBER_ID as MEMBER_I1_0_,
+             *      member0_.age as age2_0_,
+             *      member0_.TEAM_ID as TEAM_ID5_0_,
+             *      member0_.type as type3_0_,
+             *      member0_.username as username4_0_
+             *  from
+             *      Member member0_
+             *  -> member 조회 Query가 나가고,
+             * Hibernate:
+             *     select
+             *         team0_.TEAM_ID as TEAM_ID1_3_0_,
+             *         team0_.name as name2_3_0_
+             *     from
+             *         Team team0_
+             *     where
+             *         team0_.TEAM_ID=?
+             *  -> Team proxy를 채울 TeamA 에 대한 Query가 나간다.
+             *
+             * m : 회원1, team : teamA
+             * m : 회원2, team : teamA
+             * Hibernate:
+             *     select
+             *         team0_.TEAM_ID as TEAM_ID1_3_0_,
+             *         team0_.name as name2_3_0_
+             *     from
+             *         Team team0_
+             *     where
+             *         team0_.TEAM_ID=?
+             * m : 회원3, team : TeamB
+             *  -> Team Proxy를 채울 TeamB에 대한 Query가 나간다.
+             *
+             *  쿼리가 총 3번 발생한다. => N+1 문제가 발생함.
              */
-            String query = "select m.username from Member m";
+            String query = "select m from Member m";
 
-            List<String> result = em.createQuery(query, String.class)
-                    .getResultList();
+            List<Member> members = em.createQuery(query, Member.class).getResultList();
 
-            for(String s : result){
-                System.out.println("result : " + s);
+            for(Member m : members){
+                System.out.println("m : " + m.getUsername() + ", team : " + m.getTeam().getName() );
             }
 
+
             /**
-             *  단일 값 연관 경로
-             *  묵시적 내부 조인이 발생함, team 내부 탐색 가능.
+             *  fetch join
              *
              *  select
-             *      team1_.TEAM_ID as TEAM_ID1_3_,
-             *      team1_.name as name2_3_
+             *      member0_.MEMBER_ID as MEMBER_I1_0_0_,
+             *      team1_.TEAM_ID as TEAM_ID1_3_1_,
+             *      member0_.age as age2_0_0_,
+             *      member0_.TEAM_ID as TEAM_ID5_0_0_,
+             *      member0_.type as type3_0_0_,
+             *      member0_.username as username4_0_0_,
+             *      team1_.name as name2_3_1_
              *  from
              *      Member member0_
              *  inner join
              *      Team team1_
              *          on member0_.TEAM_ID=team1_.TEAM_ID
              *
-             *  실무에서는 지양해야 함.
-             *  join query가 발생하지만, 찾기 어렵다.
-             *  Query 를 튜닝하기 어려움.
+             *  Query 한 번으로 Member를 조회 할 때 Team 정보도 같이 가져온다.
+             *  Team은 Proxy가 아님.
+             *
              */
-            String query1 = "select m.team from Member m";
-            List<Team> result1 = em.createQuery(query1, Team.class)
-                    .getResultList();
+            String fetchQuery = "select m from Member m join fetch m.team";
 
-            for(Team s : result1){
-                System.out.println("result : " + s);
+            List<Member> fetchMembers = em.createQuery(fetchQuery, Member.class).getResultList();
+
+            for(Member m : fetchMembers){
+                System.out.println("m : " + m.getUsername() + ", team : " + m.getTeam().getName() );
             }
 
+            //
             /**
-             *  컬렉션 값 연관경로
-             *      - 묵시적 내부 조인 발생, 내부 탐색이 불가능하다.
-             *      - 사용하지 않는다.
-             *      - FROM 절에서 명시적 조인을 통해 별칭을 얻으면, 그 별칭으로 탐색 할 수 있다.
+             *  일대다 관계, 컬렉션 페치 조인.
+             *
+             *      team : teamA, size : 2
+             *      team : teamA, size : 2
+             *      team : TeamB, size : 1
+             *  -> 데이터가 뻥튀기 된다. Collection은 이것을 조심해야 함.
+             *
+             *  distinct
+             *      - SQL에서는 완전히 똑같아야 중복이 제거된다.
+             *      - 그러나 JPQL에서는 엔티티가 동일하면 제거한다.
+             *
              */
-//            String query2 = "select t.members from Team t";
-            String query2 = "select m.username From Team t join t.members m";
-            List members = em.createQuery(query2, Collection.class)
-                    .getResultList();
+            String teamQuery = "select distinct t from Team t join fetch t.members";
 
-            for(Object m : members){
-                System.out.println("member : " + m);
+            List<Team> teams = em.createQuery(teamQuery, Team.class).getResultList();
+            for(Team t : teams){
+                System.out.println("team : " + t.getName() + ", size : " + t.getMembers().size());
             }
-
 
         }catch (Exception e){
             tx.rollback();
