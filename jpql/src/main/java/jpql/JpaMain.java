@@ -3,17 +3,14 @@ package jpql;
 import javax.persistence.*;
 
 /**
- *  다형성 쿼리
- *      - 조회대상을 특정 자식으로 한정 할 수 있음
- *        ex) select i from Item i where type(i) IN (Book, Movie)
- *            -> select i from i where i.DTYPE in ('B', 'M')
- *  Treat
- *      - 자바의 타입 캐스팅과 유사
- *      - 상속 구조에서 부모 타입을 특정 자식 타입으로 다룰 때 사용
- *      - FROM, WHERE, SELECT 사용
- *        ex) select i from Item i where treat(i as Book).author = 'kim'
- *            -> select i.* from i where i.DTYPE = 'B' i.author = 'kim' // 구현전략에 따라 달라짐.
+ *  엔티티 직접 사용
  *
+ *  기본키 값
+ *      - JPQL에서 엔티티를 직접 사용하면 SQL에서 해당 엔티티의 기본 키 값을 사용.
+ *      - JPQL : select count(m.id) from Member m
+ *               select count(m) from Member m
+ *      - SQL : select count(m.id) as cnt from Member m
+ *          - 두 JPQL 모두 같은 쿼리가 생성된다.
  */
 
 public class JpaMain {
