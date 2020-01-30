@@ -1,5 +1,7 @@
 package jpql;
 
+import org.hibernate.annotations.BatchSize;
+
 import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +16,8 @@ public class Team {
 
     private String name;
 
+    // 1000이하의 값을 준다.
+//    @BatchSize(size = 100) -> local setting
     @OneToMany(mappedBy = "team")
     private List<Member> members = new ArrayList<>();
 
