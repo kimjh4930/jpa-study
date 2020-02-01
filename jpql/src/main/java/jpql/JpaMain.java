@@ -1,16 +1,20 @@
 package jpql;
 
 import javax.persistence.*;
+import java.util.List;
 
 /**
- *  엔티티 직접 사용
+ *  Named Query
  *
- *  기본키 값
- *      - JPQL에서 엔티티를 직접 사용하면 SQL에서 해당 엔티티의 기본 키 값을 사용.
- *      - JPQL : select count(m.id) from Member m
- *               select count(m) from Member m
- *      - SQL : select count(m.id) as cnt from Member m
- *          - 두 JPQL 모두 같은 쿼리가 생성된다.
+ *  정적쿼리
+ *      - 미리 정의해서 이름을 부여해두고 자용하는 JPQL
+ *      - 어노테이션, xml에 정의
+ *      - 애플리케이션 로딩 시점에 초기화 한 후 재사용 -> 중요
+ *      - 애플리케이션 로딩 시점에 쿼리를 검증. -> 중요
+ *
+ *  XML에 정의
+ *      - XML이 항상 우선권을 가진다.
+ *      - 애플리케이션 운영 환경에 따라 다른 XML을 배포 할 수 있다.
  */
 
 public class JpaMain {
@@ -48,6 +52,14 @@ public class JpaMain {
 
             em.flush();
             em.clear();
+
+            List<Member > result = em.createNamedQuery("Member.findByUsername", Member.class)
+                    .setParameter("username", "회원1")
+                    .getResultList();
+
+            for(Member m : result){
+                System.out.println("member : " + m);
+            }
 
         }catch (Exception e){
             tx.rollback();
