@@ -10,6 +10,4 @@ class JpashopApplicationTests {
     void contextLoads() {
     }
 
-
-
 }
